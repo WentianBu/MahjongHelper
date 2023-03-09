@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>卡五星助产士</title>
+</head>
+
+<body>
+    <h1 style="text-align: center;">卡五星助产士</h1>
+    <hr>
+    <div style="text-align: center;">
+        <div>
+            <h4>输入牌型：</h4>
+            <p>T-条，B-饼，Z-红中，F-发财，O-白板，不分大小写</p>
+            <input type="text" id="handstocalc" style="font-size: 30px; margin: 10px 0 20px 0; width: 60%;">
+            <br>
+            <button onclick="readyCalcMain();" style="font-size: 26px; margin: 0 5px 0 5px;">我听什么?</button>
+            <button onclick="adviceCalcMain();" style="font-size: 26px;margin: 0 5px 0 5px;">打什么好?</button>
+            <button onclick="clearAll();" style="font-size: 26px;margin: 0 5px 0 5px;">一键清除！</button>
+            <div style="height: 200px;">
+                <h4>当前手牌：</h4>
+                <p id="whetherwin" style="margin-top: 0; margin-bottom: 0;"></p>
+                <p id="hands"
+                    style="font-size: 40px; letter-spacing:-4px; line-height: 60px; margin-top: 0px; margin-bottom: 0px;">
+                </p>
+            </div>
+            <div style="height: 150px;">
+                <h4 id="answertitle"></h4>
+                <div id="readytilesdiv">
+                    <p id="readytiles" style="font-size: 45px; "></p>
+                </div>
+                <div id="advtilesdiv" style="display: none;">
+
+                </div>
+            </div>
+        </div>
+        <!--
+        <div style="position: relative;">
+            <h4>输入指南</h4>
+            <p><b>1. </b>不分大小写，t-条，b-饼，z-红中，f-发财，o-白板。连续数字之后必须接t或b以指明花色；z、f、o之前不可以直接出现数字。<br>
+                例如：“123456t”代表“一二三四五六条”；“zzffbb”代表“中中发发白白”；“123456z”不合法，因为红中不存在数字。
+            </p>
+            <p><b>2. </b>先输入手牌，再输入碰或杠产生的刻子，中间用空格隔开，没有刻子可以不输。<br>
+                例如：“123456789tff ooo”代表“手牌1-9条、一对发财，还有碰的三个白板。”
+            </p>
+            <p><b>3. </b>碰或杠的刻子必须一组一组输入，每组之后接花色。<br>
+                例如：“111t222t3333t”代表“碰了1、2条，杠了3条”，不可输入成“1112223333t”或“1231231233t”。
+            </p>
+        </div>
+    -->
+    </div>
+
+</body>
+<script type="text/javascript">
+    function convertCode(n) {
+        var ret = 0;
+        var lead = "";
+        if (n >= 1 && n <= 9) {
+            ret = 0x18 + n;
+            lead = "&#x1F0";
+        } else if (n >= 11 && n <= 19) {
+            ret = 0x0f + n - 10;
+            lead = "&#x1F0";
+        } else if (n == 41) {
+            ret = 0x04;
+            lead = "&#x1F00";
+        } else if (n == 43) {
+            ret = 0x05;
+            lead = "&#x1F00";
+        } else if (n == 45) {
+            ret = 0x06;
+            lead = "&#x1F00";
+        }
+        return lead + ret.toString(16);
+    }
+
+    function displayTiles(hands, triplets) {
+        var target = document.getElementById("hands");
+        var h = "", t = "";
+        for (e of hands) {
+            h += convertCode(e);
+        }
+        for (e of triplets) {
+            for (f of e) {
+                t += convertCode(f);
+            }
+            t += "&#8195";
+        }
+        target.innerHTML = h + "<br>" + t;
+    }
+
+    function displayReady(list) {
+        document.getElementById("answertitle").innerText = "您听这些：";
+        document.getElementById("readytilesdiv").style = "display: block;";
+        document.getElementById("advtilesdiv").style = "display: none;";
+        document.getElementById("whetherwin").innerText = "";
+        var target = document.getElementById("readytiles");
+        var t = "";
+        if (list.length == 0) {
+            t = "你还没听！";
+        } else {
+            for (e of list) {
+                t += convertCode(e);
+            }
+        }
+        target.innerHTML = t;
+    }
+
+    function displayAdvice(list) {
+        document.getElementById("answertitle").innerText = "您可以打这些：";
+        document.getElementById("readytilesdiv").style = "display: none;";
+        document.getElementById("advtilesdiv").style = "display: block;";
+        var tb = "<table id =\"advtiles\" border=\"1px\" class=\"table\" style=\"font-size: 35px; margin: auto; width: 60%; margin-bottom: 30px\">\
+                    <th>打</th>\
+                    <th>听</th>";
+        for (let e of list) {
+            let play = e[0], ready = e[1];
+            let item = "<tr><td>" + convertCode(e[0]) + "</td><td>";
+            for (let f of ready) {
+                item += convertCode(f);
+            }
+            item += "</td></tr>";
+            tb += item;
+        }
+        tb += "</table>";
+        document.getElementById("advtilesdiv").innerHTML = tb;
+    }
+
+    function clearAll() {
+        document.getElementById("answertitle").innerText = "";
+        document.getElementById("readytilesdiv").style = "display: none;";
+        document.getElementById("advtilesdiv").style = "display: none;";
+        document.getElementById("hands").innerHTML = "";
+        document.getElementById("whetherwin").innerHTML = "";
+        document.getElementById("handstocalc").value = "";
+    }
+</script>
+
+<script type="text/javascript">
+    function seq(a, b) { return a - b; }
+
+    function checkInput(handstr) {
+        if (handstr.length == 0) {
+            throw "没牌你打个屁";
+        }
+        patt = /^(?:(?:[1-9]+[TB])|[ZFO])+(?:\ (?:(?:([1-9])\1{2,3}[TB])|Z{3,4}|F{3,4}|O{3,4})+)?$/i;
+        if (!patt.test(handstr)) {
+            throw "你这是什么东西啊👴吐了都";
+        }
+        return true;
+    }
+
+    function parseTiles(handstr) {
+        tmplist = new Array();
+        hands = new Array();
+        for (i = 0; i < handstr.length; i++) {
+            var ch = handstr.charAt(i);
+            switch (ch) {
+                case "B":
+                    for (j = 0; j < tmplist.length; j++) {
+                        hands.push(tmplist[j]);
+                    }
+                    tmplist = new Array();
+                    break;
+                case "T":
+                    for (j = 0; j < tmplist.length; j++) {
+                        hands.push(tmplist[j] + 10);
+                    }
+                    tmplist = new Array();
+                    break;
+                case "Z":
+                    hands.push(41);
+                    break;
+                case "F":
+                    hands.push(43);
+                    break;
+                case "O":
+                    hands.push(45);
+                    break;
+                default:// numbers
+                    let n = Number(ch);
+                    if (n != n) {
+                        throw "手牌中出现非数字！";
+                    }
+                    tmplist.push(n);
+                    break;
+            }
+        }
+        return hands;
+    }
+
+    function convertHandstr(fullHandstr) {
+        handlist = fullHandstr.split(" ");
+        if (handlist.length == 1) {
+            handstr = handlist[0];
+            tripletstr = "";
+        } else {
+            handstr = handlist[0];
+            tripletstr = handlist[1];
+        }
+
+        var hands = parseTiles(handstr);
+        var triplets = parseTiles(tripletstr);
+        hands.sort(seq);
+        triplets.sort(seq);
+
+        full = hands.concat(triplets);
+        fullset = new Set(full);
+        for (e of fullset) {
+            let count = 0;
+            for (i = 0; i < full.length; i++) {
+                if (full[i] == e) {
+                    count++;
+                }
+            }
+            if (count > 4) {
+                throw "你这牌有问题啊";
+            }
+        }
+
+        let cur = 0;
+        tmp = new Array();
+        new_triplets = new Array();
+        for (i = 0; i < triplets.length; i++) {
+            if (triplets[i] != cur) {
+                if (tmp.length > 0) {
+                    new_triplets.push(tmp);
+                    tmp = new Array();
+                }
+                cur = triplets[i];
+            }
+            tmp.push(triplets[i]);
+        }
+        if (tmp.length > 0) {
+            new_triplets.push(tmp);
+        }
+
+        return Array(hands, new_triplets);
+    }
+
+    function checkWin(hands, triplets) {
+        var tileNum = triplets.length * 3 + hands.length;
+        if (tileNum != 14) {
+            return false;
+        }
+
+        // seven pairs
+        if (triplets.length == 0) {
+            let pairNum = 0;
+            for (i = 0; i < hands.length; i += 2) {
+                if (hands[i] == hands[i + 1]) {
+                    pairNum++;
+                } else {
+                    break;
+                }
+            }
+            if (pairNum == 7) {
+                return true;
+            }
+        }
+
+        // other
+        var tileSetNum = 4 - triplets.length;
+        pairCandidate = new Array();
+        for (let e of new Set(hands)) {
+            let count = 0;
+            for (i = 0; i < hands.length; i++) {
+                if (e == hands[i]) {
+                    count++;
+                }
+            }
+            if (count >= 2) {
+                pairCandidate.push(e);
+            }
+        }
+
+        for (let p of pairCandidate) {
+            var tmp = hands.concat();
+            let tileSetsNumRemain = tileSetNum;
+
+            for (i = 0; i < tmp.length; i++) {
+                if (p == tmp[i]) {
+                    tmp.splice(i, 2);
+                    break;
+                }
+            }
+
+            while (tileSetsNumRemain > 0) {
+                if (tmp[0] == tmp[1] && tmp[1] == tmp[2]) {
+                    tileSetsNumRemain--;
+                    tmp.splice(0, 3);
+                } else {
+                    let idx1 = tmp.indexOf(tmp[0] + 1);
+                    let idx2 = tmp.indexOf(tmp[0] + 2);
+                    if (idx1 != -1 && idx2 != -1) {
+                        tileSetsNumRemain--;
+                        tmp.splice(idx2, 1);
+                        tmp.splice(idx1, 1);
+                        tmp.splice(0, 1);
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            if (tileSetsNumRemain == 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function findReady(hands, triplets) {
+        var tileNum = triplets.length * 3 + hands.length;
+        if (tileNum != 13) {
+            return [];
+        }
+
+        var tilesAvailable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 41, 43, 45];
+        var readyTiles = new Array();
+        for (e of tilesAvailable) {
+            let tmp = hands.concat();
+            tmp.push(e);
+            tmp.sort(seq);
+            if (checkWin(tmp, triplets)) {
+                readyTiles.push(e);
+            }
+        }
+        return readyTiles;
+    }
+
+    function giveAdvice(hands, triplets) {
+        var tileNum = triplets.length * 3 + hands.length;
+        if (tileNum != 14) {
+            return [];
+        }
+
+        if (checkWin(hands, triplets)) {
+            document.getElementById("whetherwin").innerText = "您当前已经胡牌！";
+        }
+
+        var playAvailable = new Set(hands);
+        result = new Array();
+        for (let e of playAvailable) {
+            let tmp = hands.concat();
+            for (i = 0; i < tmp.length; i++) {
+                if (tmp[i] == e) {
+                    tmp.splice(i, 1);
+                    break;
+                }
+            }
+            var rt = findReady(tmp, triplets);
+            if (rt.length > 0) {
+                result.push([e, rt]);
+            }
+        }
+        return result;
+    }
+
+    function readyCalcMain() {
+        let handstr = document.getElementById("handstocalc").value;
+        handstr = handstr.toUpperCase();
+        try {
+            checkInput(handstr);
+            let tmp = convertHandstr(handstr);
+            var hands = tmp[0];
+            var triplets = tmp[1];
+        } catch (error) {
+            alert(error);
+        }
+        console.log(hands);
+        console.log(triplets);
+        displayTiles(hands, triplets);
+        // console.log(checkWin(hands, triplets));
+        var tileNum = triplets.length * 3 + hands.length;
+        if (tileNum != 13) {
+            alert("你相公了哥哥！");
+            return;
+        }
+        var readyTiles = findReady(hands, triplets);
+        console.log(readyTiles);
+        displayReady(readyTiles);
+    }
+
+
+    function adviceCalcMain() {
+        let handstr = document.getElementById("handstocalc").value;
+        handstr = handstr.toUpperCase();
+        try {
+            checkInput(handstr);
+            let tmp = convertHandstr(handstr);
+            var hands = tmp[0];
+            var triplets = tmp[1];
+        } catch (error) {
+            alert(error);
+        }
+        console.log(hands);
+        console.log(triplets);
+
+        displayTiles(hands, triplets);
+
+        var tileNum = triplets.length * 3 + hands.length;
+        if (tileNum != 14) {
+            alert("你相公了哥哥！");
+            return;
+        }
+        var adviceTiles = giveAdvice(hands, triplets);
+        displayAdvice(adviceTiles);
+    }
+
+
+</script>
+
+
+
+</html>
